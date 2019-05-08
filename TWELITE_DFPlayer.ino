@@ -40,8 +40,6 @@ double duration_H;
 double duration_L;
 double str_send_data;
 double duty = 0;
-int value = 0;
- 
 
 //右脚装着加速度ピン設定
 int r_x_pin = 0;
@@ -54,6 +52,7 @@ int l_y_pin = 4;
 int l_z_pin = 5;
 
 void setup() {
+   //TWELITEは基本115200or38400だけどこの方法なら大丈夫なはず
   Serial.begin(9600);
   
   //DFPlayer_mini mp3用のシリアル通信設定
@@ -72,7 +71,7 @@ void loop() {
   //TWELITEへの入力信号が0~2Vのため、読み込み信号を外部にして、MAX電圧を制御
   analogReference(EXTERNAL);
   
-  //読み込んだ信号のパルス幅を計算しduty比を計算(x)
+  //読み込んだ信号のパルス幅を計算しduty比を計算(x)<-もしpulseInがタイムアウトしてしまったら少し時間かかる
   duration_H = pulseIn(l_x_pin, HIGH);
   duration_L = pulseIn(l_x_pin, LOW);
   duty = duration_H / (duration_H + duration_L);
