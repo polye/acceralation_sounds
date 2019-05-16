@@ -1,6 +1,10 @@
+#include <SoftwareSerial.h>
+#include <DFMiniMp3.h>
+
 #define numx 0
 #define numy 1
 #define numz 2
+
 uint32_t timer;//32ビット非負整数を格納
 double velX = 0, velY = 0, velZ = 0; //生の三軸速度
 double comVelX = 0, comVelY = 0, comVelZ = 0; //訂正後の三軸速度
@@ -17,21 +21,75 @@ int i_acc = 0;
 int count = 0;
 double diff[8];
 int checker = 0;
-int Threshold_x = 40;
-int Threshold_y = 40;
-int Threshold_z = 40;
-void setup()
+int Threshold_x = 30;
+int Threshold_y = 30;
+int Threshold_z = 30;
+
+class Mp3Notify
 {
+  public:
+    static void OnError(uint16_t errorCode)
+    {
+      // see DfMp3_Error for code meaning
+      //    Serial.println();
+      //    Serial.print("Com Error ");
+      //    Serial.println(errorCode);
+    }
+
+    static void OnPlayFinished(uint16_t globalTrack)
+    {
+      //    Serial.println();
+      //    Serial.print("Play finished for #");
+      //    Serial.println(globalTrack);
+    }
+
+    static void OnCardOnline(uint16_t code)
+    {
+      //    Serial.println();
+      //    Serial.print("Card online ");
+      //    Serial.println(code);
+    }
+
+    static void OnUsbOnline(uint16_t code)
+    {
+      //    Serial.println();
+      //    Serial.print("USB Disk online ");
+      //    Serial.println(code);
+    }
+
+    static void OnCardInserted(uint16_t code)
+    {
+      //    Serial.println();
+      //    Serial.print("Card inserted ");
+      //    Serial.println(code);
+    }
+
+    static void OnUsbInserted(uint16_t code)
+    {
+      //    Serial.println();
+      //    Serial.print("USB Disk inserted ");
+      //    Serial.println(code);
+    }
+
+    static void OnCardRemoved(uint16_t code)
+    {
+      //    Serial.println();
+      //    Serial.print("Card removed ");
+      //    Serial.println(code);
+    }
+
+    static void OnUsbRemoved(uint16_t code)
+    {
+      //    Serial.println();
+      //    Serial.print("USB Disk removed ");
+      //    Serial.println(code);
+    }
+};
+DFMiniMp3<HardwareSerial, Mp3Notify> mp3(Serial);//1
+
+void setup() {
+  // put your setup code here, to run once:
   Serial.begin(115200);
-  //  Serial.begin(9600);**
-  //  Serial.println("start");
-  //  Serial.println(F("DFRobot DFPlayer Mini Demo"));
-  //  Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));**
-
-  for (i_acc = 0; i_acc < n; i_acc++) {
-    diff[i_acc] = 0;
-  }
-
   accX = analogRead(numx);
   accY = analogRead(numy);
   accZ = analogRead(numz);
@@ -39,11 +97,40 @@ void setup()
   delay(10);//Wait for sensor to stablize
 
   timer = micros();
+  mp3.begin();
+  delay(1000);
+  mp3.setVolume(10);//
+
 
 }
 
-void loop()
+void waitMilliseconds(uint16_t msWait)
 {
+  uint32_t start = millis();
+
+  while ((millis() - start) < msWait)
+  {
+    // calling mp3.loop() periodically allows for notifications
+    // to be handled without interrupts
+    mp3.loop();
+    delay(1);
+  }
+}
+
+
+void loop() {
+  // put your main code here, to run repeatedly:
+//
+//  mp3.playMp3FolderTrack(1);  // sd:/mp3/0001.mp3
+//  waitMilliseconds(1000);
+//
+//  mp3.playMp3FolderTrack(2); // sd:/mp3/0002.mp3
+//  waitMilliseconds(1000);
+//
+//  mp3.playMp3FolderTrack(3); // sd:/mp3/0002.mp3
+//  waitMilliseconds(1000);
+
+  //
   int check_x = 0;
   int check_y = 0;
   int check_z = 0;
@@ -66,11 +153,6 @@ void loop()
   comAccY = accY - gravityY;
   comAccZ = accZ - gravityZ;
 
-  /*********************************************************************
-    if(abs(velX) < 100)velX = 0;
-    if(abs(velY) < 100)velY = 0;
-    if(abs(velZ) < 100)velZ = 0;
-  */
   //平滑化（ノイズ除去）highpassfilter
 
   if (abs(comAccX) < 10)comAccX = 0;
@@ -115,23 +197,26 @@ void loop()
     check_z = 1200;
     delay(10);
   }
-
-
-
   if (check_x > 1000) {
     //mySoftwareSerial.listen();
     //myDFPlayer.playFolder(1, 2);
     //delay(500);
+    mp3.playMp3FolderTrack(1);  // sd:/mp3/0001.mp3
+//    waitMilliseconds(1000);
   }
   if (check_y > 1000) {
     //mySoftwareSerial.listen();
     //myDFPlayer.playFolder(1, 8);
     //Serial.listen();
     //delay(500);
+    mp3.playMp3FolderTrack(2); // sd:/mp3/0002.mp3
+//    waitMilliseconds(1000);
   }
   if (check_z > 1000) {
     //myDFPlayer.playFolder(1, 12);
     //delay(500);
+    mp3.playMp3FolderTrack(3); // sd:/mp3/0002.mp3
+//    waitMilliseconds(1000);
   }
 
 
@@ -147,22 +232,22 @@ void loop()
   //    Serial.print(accX); Serial.print("\t");
   //    Serial.print(accY); Serial.print("\t");
   //    Serial.print(accZ); Serial.print("\t");
-  Serial.print(disX); Serial.print("\t");
-  Serial.print(disY); Serial.print("\t");
-  Serial.print(disZ); Serial.print("\t");
-  Serial.print(disR); Serial.print("\t");
-  Serial.print(check_x); Serial.print("\t");
-  Serial.print(check_y); Serial.print("\t");
-  Serial.print(check_z); Serial.print("\t");
-  //  Serial.print(checker); Serial.print("\t");
-  Serial.print(velR); Serial.print("\t");
+  //  Serial.print(disX); Serial.print("\t");
+  //  Serial.print(disY); Serial.print("\t");
+  //  Serial.print(disZ); Serial.print("\t");
+  //  Serial.print(disR); Serial.print("\t");
+  //  Serial.print(check_x); Serial.print("\t");
+  //  Serial.print(check_y); Serial.print("\t");
+  //  Serial.print(check_z); Serial.print("\t");
+  //  //  Serial.print(checker); Serial.print("\t");
+  //  Serial.print(velR); Serial.print("\t");
 
   /*
     Serial.print(comAccX); Serial.print("\t");
     Serial.print(comAccY); Serial.print("\t");
     Serial.print(comAccZ); Serial.print("\t");
   */
-  Serial.print("\r\n");
+  //  Serial.print("\r\n");********
   check_x = 0;
   check_y = 0;
   check_z = 0;
@@ -186,4 +271,6 @@ void loop()
 
 
   delay(2);
+
+
 }
